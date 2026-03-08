@@ -1,17 +1,28 @@
 import type { Metadata } from "next";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "RepurposeToday — Your Next Chapter Starts Here",
+  title: "RepurposeToday — Find Your Next Chapter",
   description:
-    "Discover your purpose in the age of AI. Guided Ikigai assessment, community cohorts, and peer skill-sharing for workers navigating career transitions.",
+    "AI is changing work. We help you find what's next. Guided purpose-discovery, community cohorts, and peer skill-sharing for workers navigating career transitions.",
   openGraph: {
-    title: "RepurposeToday — Your Next Chapter Starts Here",
+    title: "RepurposeToday — Find Your Next Chapter",
     description:
-      "AI is changing everything. Discover what you could become — not just what you could learn.",
+      "AI is changing work. We help you find what's next.",
     type: "website",
     url: "https://repurposetoday.com",
+    siteName: "RepurposeToday",
+    images: ["/opengraph-image"],
   },
+  twitter: {
+    card: "summary_large_image",
+    title: "RepurposeToday — Find Your Next Chapter",
+    description:
+      "AI is changing work. We help you find what's next.",
+    images: ["/opengraph-image"],
+  },
+  metadataBase: new URL("https://repurposetoday.com"),
 };
 
 export default function RootLayout({
@@ -35,6 +46,7 @@ export default function RootLayout({
       </head>
       <body className="font-body bg-warm-50 text-warm-900 antialiased">
         {children}
+        <Analytics />
       </body>
     </html>
   );

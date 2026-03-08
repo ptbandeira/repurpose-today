@@ -1,19 +1,5 @@
 import { NextResponse } from "next/server";
-import { promises as fs } from "fs";
-import path from "path";
-
-// Simple file-based storage for MVP validation
-// Replace with Supabase or Vercel KV when scaling
-const DATA_FILE = path.join(process.cwd(), "signups.json");
-
-async function getSignups(): Promise<Array<Record<string, string>>> {
-  try {
-    const data = await fs.readFile(DATA_FILE, "utf-8");
-    return JSON.parse(data);
-  } catch {
-    return [];
-  }
-}
+import { supabase } from "@/app/lib/supabase";
 
 export async function POST(request: Request) {
   try {
@@ -24,26 +10,31 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Email required" }, { status: 400 });
     }
 
-    const signups = await getSignups();
-
     if (type === "persona_update") {
-      // Update existing signup with persona selection
-      const existing = signups.find((s) => s.email === email);
-      if (existing) {
-        existing.situation = situation;
-        existing.persona_updated_at = new Date().toISOString();
+      const { error } = await supabase
+        .from("rt_signups")
+        .update({ situation, persona_updated_at: new Date().toISOString() })
+        .eq("email", email);
+
+      if (error) {
+        console.error("Persona update error:", error);
+        return NextResponse.json({ error: "Update failed" }, { status: 500 });
       }
     } else {
-      // New signup
-      signups.push({
-        email,
-        situation: situation || "",
-        signed_up_at: new Date().toISOString(),
-        source: "website",
-      });
-    }
+      const { error } = await supabase.from("rt_signups").upsert(
+        {
+          email,
+          situation: situation || null,
+          source: "website",
+        },
+        { onConflict: "email" }
+      );
 
-    await fs.writeFile(DATA_FILE, JSON.stringify(signups, null, 2));
+      if (error) {
+        console.error("Signup error:", error);
+        return NextResponse.json({ error: "Signup failed" }, { status: 500 });
+      }
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {
@@ -56,10 +47,17 @@ export async function POST(request: Request) {
 }
 
 export async function GET() {
-  // Simple admin endpoint to check signups
-  const signups = await getSignups();
+  const { data, error } = await supabase
+    .from("rt_signups")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
   return NextResponse.json({
-    total: signups.length,
-    signups,
+    total: data?.length ?? 0,
+    signups: data,
   });
 }
