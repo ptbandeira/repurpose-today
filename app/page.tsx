@@ -9,6 +9,7 @@ import {
   Lightbulb,
   ChevronDown,
 } from "lucide-react";
+import { track } from "@vercel/analytics";
 
 // ─── Scroll animation hook ───
 function useInView(threshold = 0.15) {
@@ -98,7 +99,10 @@ function FAQItem({ q, a }: { q: string; a: string }) {
   return (
     <div className="border-b border-warm-200 last:border-0">
       <button
-        onClick={() => setOpen(!open)}
+        onClick={() => {
+          if (!open) track("faq_opened", { question: q });
+          setOpen(!open);
+        }}
         className="w-full flex items-center justify-between py-5 text-left group"
       >
         <span className="font-semibold text-warm-800 group-hover:text-sage-700 transition-colors pr-4">
@@ -141,6 +145,7 @@ export default function Home() {
     } catch {
       // Silently fail — Supabase handles persistence
     }
+    track("signup", { email_domain: email.split("@")[1] || "unknown" });
     setSubmitted(true);
     setLoading(false);
   };
@@ -221,6 +226,7 @@ export default function Home() {
                           type: "persona_update",
                         }),
                       }).catch(() => {});
+                      track("persona_selected", { persona: option });
                     }}
                     className={`w-full text-left px-4 py-3 rounded-lg border text-sm transition-colors ${
                       situation === option

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -27,7 +28,8 @@ export const metadata: Metadata = {
     canonical: "https://repurposetoday.com",
   },
   icons: {
-    icon: "/favicon.ico",
+    icon: "/icon",
+    apple: "/apple-icon",
   },
 };
 
@@ -70,6 +72,7 @@ export default function RootLayout({
       <body className="font-body bg-warm-50 text-warm-900 antialiased">
         {children}
         <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );
