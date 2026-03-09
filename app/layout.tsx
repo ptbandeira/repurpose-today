@@ -5,11 +5,11 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "RepurposeToday — Find Your Next Chapter",
   description:
-    "AI is changing work. We help you find what's next. Guided purpose-discovery, community cohorts, and peer skill-sharing for workers navigating career transitions.",
+    "Purpose discovery for professionals navigating the AI transition. Guided Ikigai assessment, community cohorts, and peer skill-sharing. Join the founding cohort — free.",
   openGraph: {
     title: "RepurposeToday — Find Your Next Chapter",
     description:
-      "AI is changing work. We help you find what's next.",
+      "AI is changing work. We help you find what's next. Purpose discovery, not just reskilling.",
     type: "website",
     url: "https://repurposetoday.com",
     siteName: "RepurposeToday",
@@ -19,10 +19,29 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "RepurposeToday — Find Your Next Chapter",
     description:
-      "AI is changing work. We help you find what's next.",
+      "AI is changing work. We help you find what's next. Purpose discovery, not just reskilling.",
     images: ["/opengraph-image"],
   },
   metadataBase: new URL("https://repurposetoday.com"),
+  alternates: {
+    canonical: "https://repurposetoday.com",
+  },
+  icons: {
+    icon: "/favicon.ico",
+  },
+};
+
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: "RepurposeToday",
+  url: "https://repurposetoday.com",
+  description:
+    "Purpose discovery for professionals navigating the AI transition. Guided Ikigai assessment, community cohorts, and peer skill-sharing.",
+  founder: {
+    "@type": "Person",
+    name: "Pedro Bandeira",
+  },
 };
 
 export default function RootLayout({
@@ -42,6 +61,10 @@ export default function RootLayout({
         <link
           href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
           rel="stylesheet"
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
       </head>
       <body className="font-body bg-warm-50 text-warm-900 antialiased">

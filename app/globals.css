@@ -34,3 +34,8 @@
 html {
   scroll-behavior: smooth;
 }
+
+/* Ensure smooth transitions don't flicker on page load */
+main {
+  overflow-x: hidden;
+}

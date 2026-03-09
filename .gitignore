@@ -4,3 +4,4 @@ out/
 signups.json
 .env
 .env.local
+.vercel
