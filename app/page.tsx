@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, type ReactNode } from "react";
+import Image from "next/image";
 import {
   BookOpen,
   Compass,
@@ -207,7 +208,17 @@ export default function Home() {
     <main className="min-h-screen">
       {/* ─── HERO ─── */}
       <section className="relative px-6 py-24 md:py-32 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary-50 via-white to-neutral-50 hero-bg" />
+        <div className="absolute inset-0 hero-bg">
+          <Image
+            src="/images/hero-bg.jpg"
+            alt="Professional at work"
+            fill
+            priority
+            className="object-cover"
+            sizes="100vw"
+          />
+          <div className="absolute inset-0 bg-gradient-to-br from-white/90 via-white/80 to-primary-50/70" />
+        </div>
         <div className="relative z-10 max-w-4xl mx-auto text-center">
           <FadeIn>
             <div className="mb-6">
@@ -521,26 +532,46 @@ export default function Home() {
               title:
                 "The senior professional watching AI reshape your industry",
               desc: "You've built a 15-year career in law, finance, or consulting. You're good at what you do — but the work itself is changing. You need clarity, not another webinar.",
+              img: "/images/persona-1.jpg",
+              alt: "Senior professional reflecting on career direction",
             },
             {
               title: "The leader carrying a team through transformation",
               desc: "Your company is restructuring around AI. You're expected to lead the change while privately wondering what it means for your own career.",
+              img: "/images/persona-2.jpg",
+              alt: "Team collaborating in modern office",
             },
             {
               title: "The expert whose expertise is being automated",
               desc: "Your deep knowledge was your edge. Now an AI does 80% of it. You know you need to evolve — but into what?",
+              img: "/images/persona-3.jpg",
+              alt: "Professional focused on laptop work",
             },
             {
               title: "The builder who hasn't started yet",
               desc: "You've had an idea for years — a consulting practice, a startup, a career pivot. You don't need another course. You need a framework and a push.",
+              img: "/images/persona-4.jpg",
+              alt: "Entrepreneur thinking about new project",
             },
-          ].map(({ title, desc }, i) => (
+          ].map(({ title, desc, img, alt }, i) => (
             <FadeIn key={title} delay={i * 100}>
-              <div className="persona-card p-6 rounded-2xl border border-neutral-200 bg-white shadow-sm h-full">
-                <h3 className="font-semibold text-lg mb-2 text-neutral-800">
-                  {title}
-                </h3>
-                <p className="text-neutral-600">{desc}</p>
+              <div className="persona-card rounded-2xl border border-neutral-200 bg-white shadow-sm h-full overflow-hidden">
+                <div className="relative h-48 w-full">
+                  <Image
+                    src={img}
+                    alt={alt}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 768px) 100vw, 50vw"
+                    loading="lazy"
+                  />
+                </div>
+                <div className="p-6">
+                  <h3 className="font-semibold text-lg mb-2 text-neutral-800">
+                    {title}
+                  </h3>
+                  <p className="text-neutral-600">{desc}</p>
+                </div>
               </div>
             </FadeIn>
           ))}
