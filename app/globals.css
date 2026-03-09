@@ -1,33 +1,37 @@
 @import "tailwindcss";
 
 @theme {
-  --color-warm-50: #fdf8f0;
-  --color-warm-100: #f5ead6;
-  --color-warm-200: #e8d5b0;
-  --color-warm-300: #d4b87a;
-  --color-warm-400: #c49a4e;
-  --color-warm-500: #a67c3a;
-  --color-warm-600: #8a6430;
-  --color-warm-700: #6e4f27;
-  --color-warm-800: #523b1e;
-  --color-warm-900: #3a2a16;
+  /* Primary — Orange family (the signature) */
+  --color-primary-50: #fff7ed;
+  --color-primary-100: #ffedd5;
+  --color-primary-200: #fed7aa;
+  --color-primary-300: #fdba74;
+  --color-primary-400: #fb923c;
+  --color-primary-500: #f97316;
+  --color-primary-600: #ea580c;
+  --color-primary-700: #c2410c;
+  --color-primary-800: #9a3412;
+  --color-primary-900: #7c2d12;
 
-  --color-sage-50: #f0f5f0;
-  --color-sage-100: #d4e4d4;
-  --color-sage-200: #a8c8a8;
-  --color-sage-300: #7aab7a;
-  --color-sage-400: #548f54;
-  --color-sage-500: #3d7a3d;
-  --color-sage-600: #306230;
-  --color-sage-700: #264c26;
-  --color-sage-800: #1c381c;
-  --color-sage-900: #142614;
+  /* Neutral — Warm grays (backgrounds, text) */
+  --color-neutral-50: #fafaf9;
+  --color-neutral-100: #f5f5f4;
+  --color-neutral-200: #e7e5e4;
+  --color-neutral-300: #d6d3d1;
+  --color-neutral-400: #a8a29e;
+  --color-neutral-500: #78716c;
+  --color-neutral-600: #57534e;
+  --color-neutral-700: #44403c;
+  --color-neutral-800: #292524;
+  --color-neutral-900: #1c1917;
 
-  --color-sunset-400: #e8845a;
-  --color-sunset-500: #d4693e;
-  --color-sunset-600: #b85530;
+  /* Accent — Deep teal for contrast (used sparingly) */
+  --color-accent-500: #0d9488;
+  --color-accent-600: #0f766e;
+  --color-accent-700: #115e59;
 
-  --font-heading: 'Georgia', 'Times New Roman', serif;
+  /* Fonts — Inter throughout */
+  --font-heading: 'Inter', system-ui, -apple-system, sans-serif;
   --font-body: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
@@ -35,7 +39,41 @@ html {
   scroll-behavior: smooth;
 }
 
-/* Ensure smooth transitions don't flicker on page load */
 main {
   overflow-x: hidden;
 }
+
+/* CTA pulse animation */
+@keyframes subtle-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.3); }
+  50% { box-shadow: 0 0 0 8px rgba(249, 115, 22, 0); }
+}
+
+.cta-primary {
+  animation: subtle-pulse 3s ease-in-out infinite;
+}
+
+/* Hero word reveal */
+@keyframes word-reveal {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.word-reveal {
+  opacity: 0;
+  animation: word-reveal 0.5s ease-out forwards;
+}
+
+/* Persona card hover */
+.persona-card {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.persona-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px -8px rgba(0,0,0,0.1);
+}
+
+/* Google Translate overrides */
+.goog-te-banner-frame, .skiptranslate { display: none !important; }
+body { top: 0 !important; }

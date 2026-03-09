@@ -14,7 +14,7 @@ export default function Icon() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: "linear-gradient(135deg, #306230 0%, #3d7a3d 100%)",
+          background: "linear-gradient(135deg, #ea580c 0%, #f97316 100%)",
           borderRadius: "6px",
         }}
       >
@@ -22,8 +22,8 @@ export default function Icon() {
           style={{
             fontSize: "20px",
             fontWeight: 700,
-            color: "#fdf8f0",
-            fontFamily: "Georgia, serif",
+            color: "#ffffff",
+            fontFamily: "Inter, system-ui, sans-serif",
             lineHeight: 1,
           }}
         >

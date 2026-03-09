@@ -49,9 +49,7 @@ function FadeIn({
     <div
       ref={ref}
       className={`transition-all duration-700 ease-out ${
-        isVisible
-          ? "opacity-100 translate-y-0"
-          : "opacity-0 translate-y-6"
+        isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
       } ${className}`}
       style={{ transitionDelay: `${delay}ms` }}
     >
@@ -61,7 +59,13 @@ function FadeIn({
 }
 
 // ─── Animated counter ───
-function AnimatedNumber({ value, suffix = "" }: { value: string; suffix?: string }) {
+function AnimatedNumber({
+  value,
+  suffix = "",
+}: {
+  value: string;
+  suffix?: string;
+}) {
   const { ref, isVisible } = useInView(0.3);
   const [display, setDisplay] = useState("0");
   const numericPart = value.replace(/[^0-9.]/g, "");
@@ -97,7 +101,7 @@ function AnimatedNumber({ value, suffix = "" }: { value: string; suffix?: string
 function FAQItem({ q, a }: { q: string; a: string }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className="border-b border-warm-200 last:border-0">
+    <div className="border-b border-neutral-200 last:border-0">
       <button
         onClick={() => {
           if (!open) track("faq_opened", { question: q });
@@ -105,11 +109,11 @@ function FAQItem({ q, a }: { q: string; a: string }) {
         }}
         className="w-full flex items-center justify-between py-5 text-left group"
       >
-        <span className="font-semibold text-warm-800 group-hover:text-sage-700 transition-colors pr-4">
+        <span className="font-semibold text-neutral-800 group-hover:text-primary-600 transition-colors pr-4">
           {q}
         </span>
         <ChevronDown
-          className={`w-5 h-5 text-warm-400 shrink-0 transition-transform duration-300 ${
+          className={`w-5 h-5 text-neutral-400 shrink-0 transition-transform duration-300 ${
             open ? "rotate-180" : ""
           }`}
         />
@@ -119,9 +123,30 @@ function FAQItem({ q, a }: { q: string; a: string }) {
           open ? "max-h-40 pb-5" : "max-h-0"
         }`}
       >
-        <p className="text-warm-600 leading-relaxed">{a}</p>
+        <p className="text-neutral-600 leading-relaxed">{a}</p>
       </div>
     </div>
+  );
+}
+
+// ─── Hero headline with word stagger ───
+function HeroHeadline({ text }: { text: string }) {
+  const { ref, isVisible } = useInView();
+  return (
+    <h1
+      ref={ref}
+      className="font-heading text-4xl sm:text-5xl md:text-7xl font-bold leading-tight mb-6 text-neutral-900"
+    >
+      {text.split(" ").map((word, i) => (
+        <span
+          key={i}
+          className={`inline-block ${isVisible ? "word-reveal" : "opacity-0"}`}
+          style={{ animationDelay: `${i * 80}ms` }}
+        >
+          {word}&nbsp;
+        </span>
+      ))}
+    </h1>
   );
 }
 
@@ -131,6 +156,27 @@ export default function Home() {
   const [situation, setSituation] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // Google Translate auto-detect (once per session)
+  useEffect(() => {
+    const lang = navigator.language?.slice(0, 2);
+    if (lang && lang !== "en" && !sessionStorage.getItem("gt_init")) {
+      document.cookie = `googtrans=/en/${lang}; path=/`;
+      sessionStorage.setItem("gt_init", "1");
+      window.location.reload();
+    }
+  }, []);
+
+  // Hero parallax
+  useEffect(() => {
+    const handleScroll = () => {
+      const heroEl = document.querySelector(".hero-bg") as HTMLElement;
+      if (heroEl)
+        heroEl.style.transform = `translateY(${window.scrollY * 0.3}px)`;
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -150,125 +196,140 @@ export default function Home() {
     setLoading(false);
   };
 
+  const clearTranslation = () => {
+    document.cookie =
+      "googtrans=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    sessionStorage.removeItem("gt_init");
+    window.location.reload();
+  };
+
   return (
     <main className="min-h-screen">
       {/* ─── HERO ─── */}
-      <section className="relative px-6 py-24 md:py-32 max-w-4xl mx-auto text-center">
-        <FadeIn>
-          <div className="mb-6">
-            <span className="inline-block px-4 py-1.5 bg-sage-100 text-sage-700 text-sm font-medium rounded-full">
-              For professionals who want more than a certificate
-            </span>
-          </div>
-
-          <h1 className="font-heading text-3xl sm:text-4xl md:text-6xl font-normal leading-tight mb-6 text-warm-900">
-            Your next chapter starts with a question,{" "}
-            <span className="text-sage-600 italic">not a course.</span>
-          </h1>
-
-          <p className="text-lg md:text-xl text-warm-700 max-w-2xl mx-auto mb-10 leading-relaxed">
-            The World Economic Forum says 92 million jobs disappear by 2030.
-            The reskilling industry says: take a course. We say: find your
-            purpose first — then the skills follow.
-          </p>
-        </FadeIn>
-
-        {!submitted ? (
-          <FadeIn delay={200}>
-            <form onSubmit={handleSubmit} className="max-w-md mx-auto space-y-3">
-              <input
-                type="email"
-                required
-                placeholder="Your email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-5 py-3.5 rounded-xl border border-warm-200 bg-white text-warm-900 placeholder:text-warm-400 focus:outline-none focus:ring-2 focus:ring-sage-400 focus:border-transparent text-base"
-              />
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full px-5 py-3.5 rounded-xl bg-sage-600 hover:bg-sage-700 text-white font-semibold text-base transition-colors disabled:opacity-60"
-              >
-                {loading ? "Joining..." : "Join the first cohort — 10 spots"}
-              </button>
-              <p className="text-sm text-warm-500">
-                Starting April 2026. Free for founding members. No spam.
-              </p>
-            </form>
-          </FadeIn>
-        ) : (
+      <section className="relative px-6 py-24 md:py-32 overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary-50 via-white to-neutral-50 hero-bg" />
+        <div className="relative z-10 max-w-4xl mx-auto text-center">
           <FadeIn>
-            <div className="max-w-md mx-auto p-6 bg-sage-50 rounded-2xl border border-sage-200">
-              <p className="text-sage-800 font-semibold text-lg mb-2">
-                You&apos;re in.
-              </p>
-              <p className="text-sage-700">
-                We&apos;ll reach out when the first cohort opens. One quick question:
-              </p>
-              <div className="mt-4 space-y-2">
-                {[
-                  "I feel stuck in my career and want direction",
-                  "I'm worried AI will affect my job",
-                  "I want to learn new skills but don't know which ones",
-                  "I have skills to share and want to teach others",
-                  "I want to build something new but need co-creators",
-                ].map((option) => (
-                  <button
-                    key={option}
-                    onClick={() => {
-                      setSituation(option);
-                      fetch("/api/signup", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                          email,
-                          situation: option,
-                          type: "persona_update",
-                        }),
-                      }).catch(() => {});
-                      track("persona_selected", { persona: option });
-                    }}
-                    className={`w-full text-left px-4 py-3 rounded-lg border text-sm transition-colors ${
-                      situation === option
-                        ? "border-sage-500 bg-sage-100 text-sage-800"
-                        : "border-warm-200 bg-white text-warm-700 hover:border-sage-300"
-                    }`}
-                  >
-                    {option}
-                  </button>
-                ))}
-              </div>
-              {situation && (
-                <p className="mt-4 text-sage-600 text-sm">
-                  Thank you! This helps us build the right experience for you.
-                </p>
-              )}
+            <div className="mb-6">
+              <span className="inline-block px-4 py-1.5 bg-primary-100 text-primary-700 text-sm font-medium rounded-full">
+                The Repurpose Framework™ — for professionals in transition
+              </span>
             </div>
           </FadeIn>
-        )}
+
+          <HeroHeadline text="AI won't replace you. But it will replace your job description." />
+
+          <FadeIn delay={200}>
+            <p className="text-lg md:text-xl text-neutral-600 max-w-2xl mx-auto mb-10 leading-relaxed">
+              92 million jobs will be restructured by 2030. The reskilling
+              industry says: take a course. We built a framework to help you
+              find your purpose first — then the skills follow.
+            </p>
+          </FadeIn>
+
+          {!submitted ? (
+            <FadeIn delay={400}>
+              <form
+                onSubmit={handleSubmit}
+                className="max-w-md mx-auto space-y-3"
+              >
+                <input
+                  type="email"
+                  required
+                  placeholder="Your email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full px-5 py-3.5 rounded-xl border border-neutral-200 bg-white text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent text-base"
+                />
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="cta-primary w-full px-5 py-3.5 rounded-xl bg-primary-500 hover:bg-primary-600 text-white font-semibold text-base transition-colors disabled:opacity-60"
+                >
+                  {loading
+                    ? "Joining..."
+                    : "Join the founding cohort — 10 spots"}
+                </button>
+                <p className="text-sm text-neutral-500">
+                  Starting April 2026 · Free for founding members · No spam
+                </p>
+              </form>
+            </FadeIn>
+          ) : (
+            <FadeIn>
+              <div className="max-w-md mx-auto p-6 bg-primary-50 rounded-2xl border border-primary-200">
+                <p className="text-primary-800 font-semibold text-lg mb-2">
+                  You&apos;re in.
+                </p>
+                <p className="text-primary-700">
+                  We&apos;ll reach out when the founding cohort opens. One quick
+                  question:
+                </p>
+                <div className="mt-4 space-y-2">
+                  {[
+                    "I feel stuck in my career and want direction",
+                    "I'm worried AI will affect my job",
+                    "I want to learn new skills but don't know which ones",
+                    "I have skills to share and want to teach others",
+                    "I want to build something new but need co-creators",
+                  ].map((option) => (
+                    <button
+                      key={option}
+                      onClick={() => {
+                        setSituation(option);
+                        fetch("/api/signup", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            email,
+                            situation: option,
+                            type: "persona_update",
+                          }),
+                        }).catch(() => {});
+                        track("persona_selected", { persona: option });
+                      }}
+                      className={`w-full text-left px-4 py-3 rounded-lg border text-sm transition-colors ${
+                        situation === option
+                          ? "border-primary-500 bg-primary-100 text-primary-800"
+                          : "border-neutral-200 bg-white text-neutral-700 hover:border-primary-300"
+                      }`}
+                    >
+                      {option}
+                    </button>
+                  ))}
+                </div>
+                {situation && (
+                  <p className="mt-4 text-primary-600 text-sm">
+                    Thank you! This helps us build the right experience for you.
+                  </p>
+                )}
+              </div>
+            </FadeIn>
+          )}
+        </div>
       </section>
 
       {/* ─── SOCIAL PROOF BAR ─── */}
       <FadeIn>
-        <section className="px-6 py-10 border-y border-warm-200 bg-white">
+        <section className="px-6 py-10 border-y border-neutral-200 bg-white">
           <div className="max-w-4xl mx-auto text-center">
-            <p className="text-sm text-warm-500 uppercase tracking-wider mb-5">
+            <p className="text-sm text-neutral-500 uppercase tracking-wider mb-5">
               Built on research from
             </p>
-            <div className="flex flex-wrap items-center justify-center gap-x-10 gap-y-3 text-warm-400">
-              <span className="font-heading text-base md:text-lg text-warm-500">
+            <div className="flex flex-wrap items-center justify-center gap-x-10 gap-y-3 text-neutral-400">
+              <span className="font-heading text-base md:text-lg text-neutral-500">
                 World Economic Forum
               </span>
-              <span className="hidden md:inline text-warm-300">|</span>
-              <span className="font-heading text-base md:text-lg text-warm-500">
+              <span className="hidden md:inline text-neutral-300">|</span>
+              <span className="font-heading text-base md:text-lg text-neutral-500">
                 McKinsey Global Institute
               </span>
-              <span className="hidden md:inline text-warm-300">|</span>
-              <span className="font-heading text-base md:text-lg text-warm-500">
+              <span className="hidden md:inline text-neutral-300">|</span>
+              <span className="font-heading text-base md:text-lg text-neutral-500">
                 EU Skills Agenda
               </span>
-              <span className="hidden md:inline text-warm-300">|</span>
-              <span className="font-heading text-base md:text-lg text-warm-500">
+              <span className="hidden md:inline text-neutral-300">|</span>
+              <span className="font-heading text-base md:text-lg text-neutral-500">
                 Ikigai Framework
               </span>
             </div>
@@ -277,42 +338,42 @@ export default function Home() {
       </FadeIn>
 
       {/* ─── THE PROBLEM ─── */}
-      <section className="px-6 py-20 bg-warm-100/50">
+      <section className="px-6 py-20 bg-neutral-50">
         <div className="max-w-4xl mx-auto">
           <FadeIn>
-            <h2 className="font-heading text-3xl md:text-4xl text-center mb-12 text-warm-800">
+            <h2 className="font-heading text-3xl md:text-4xl font-bold text-center mb-12 text-neutral-900">
               The reskilling industry has it backwards.
             </h2>
           </FadeIn>
 
           <div className="grid md:grid-cols-2 gap-8">
             <FadeIn delay={100}>
-              <div className="p-6 bg-white rounded-2xl border border-warm-200 h-full">
-                <div className="w-12 h-12 bg-warm-100 rounded-xl flex items-center justify-center mb-4">
-                  <BookOpen className="w-6 h-6 text-warm-500" />
+              <div className="p-6 bg-white rounded-2xl border border-neutral-200 shadow-sm h-full">
+                <div className="w-12 h-12 bg-neutral-100 rounded-xl flex items-center justify-center mb-4">
+                  <BookOpen className="w-6 h-6 text-neutral-500" />
                 </div>
-                <h3 className="font-semibold text-lg mb-2 text-warm-800">
+                <h3 className="font-semibold text-lg mb-2 text-neutral-800">
                   What they offer
                 </h3>
-                <p className="text-warm-600">
-                  10,000 courses. Certificates. Video lectures. &quot;Learn Python in 30
-                  days.&quot; A $35 billion industry that assumes you already know what
-                  you want to become.
+                <p className="text-neutral-600">
+                  10,000 courses. Certificates. Video lectures. &quot;Learn
+                  Python in 30 days.&quot; A $35 billion industry that assumes
+                  you already know what you want to become.
                 </p>
               </div>
             </FadeIn>
             <FadeIn delay={200}>
-              <div className="p-6 bg-sage-50 rounded-2xl border border-sage-200 h-full">
-                <div className="w-12 h-12 bg-sage-100 rounded-xl flex items-center justify-center mb-4">
-                  <Compass className="w-6 h-6 text-sage-600" />
+              <div className="p-6 bg-primary-50 rounded-2xl border border-primary-200 shadow-sm h-full">
+                <div className="w-12 h-12 bg-primary-100 rounded-xl flex items-center justify-center mb-4">
+                  <Compass className="w-6 h-6 text-primary-600" />
                 </div>
-                <h3 className="font-semibold text-lg mb-2 text-sage-800">
+                <h3 className="font-semibold text-lg mb-2 text-neutral-800">
                   What you actually need
                 </h3>
-                <p className="text-sage-700">
+                <p className="text-neutral-700">
                   A way to discover your purpose first. A community of people
-                  navigating the same transition. Real humans to learn from — not
-                  just screens.
+                  navigating the same transition. Real humans to learn from —
+                  not just screens.
                 </p>
               </div>
             </FadeIn>
@@ -320,20 +381,20 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ─── THREE STEPS (Timeline) ─── */}
+      {/* ─── THE REPURPOSE FRAMEWORK™ ─── */}
       <section className="px-6 py-20 max-w-5xl mx-auto">
         <FadeIn>
-          <h2 className="font-heading text-3xl md:text-4xl text-center mb-4 text-warm-800">
-            Three steps to your next chapter
+          <h2 className="font-heading text-3xl md:text-4xl font-bold text-center mb-4 text-neutral-900">
+            The Repurpose Framework™
           </h2>
-          <p className="text-center text-warm-600 mb-16 max-w-2xl mx-auto">
-            Based on Ikigai — but designed for the AI age.
+          <p className="text-center text-neutral-600 mb-16 max-w-2xl mx-auto">
+            Not a course. Not a quiz. A guided framework for career
+            reinvention.
           </p>
         </FadeIn>
 
         <div className="relative">
-          {/* Connecting line — desktop */}
-          <div className="hidden md:block absolute top-10 left-[16.67%] right-[16.67%] h-px bg-sage-200" />
+          <div className="hidden md:block absolute top-10 left-[16.67%] right-[16.67%] h-px bg-primary-200" />
 
           <div className="grid md:grid-cols-3 gap-10 md:gap-8">
             {[
@@ -342,55 +403,59 @@ export default function Home() {
                 icon: Search,
                 title: "Discover",
                 desc: "An AI-guided Ikigai assessment that maps what you love, what you're good at, what the world needs, and what you can earn from. Not a quiz — a conversation that evolves over weeks.",
-                bg: "bg-sunset-400/10",
-                iconColor: "text-sunset-500",
-                accent: "border-l-sunset-400",
+                bg: "bg-primary-400/10",
+                iconColor: "text-primary-500",
+                accent: "border-l-primary-400",
               },
               {
                 step: "02",
                 icon: Users,
                 title: "Connect",
-                desc: "Join a cohort of 10 people navigating the same transition. Meet weekly. Share openly. Find someone with a pottery studio, a coding mentor, or a co-founder who complements your strengths.",
-                bg: "bg-sage-400/10",
-                iconColor: "text-sage-600",
-                accent: "border-l-sage-400",
+                desc: "Join a cohort of 10 people navigating the same transition. Meet weekly. Share openly. Find a consulting partner, a technical co-founder, or a mentor who's already made the transition you're planning.",
+                bg: "bg-accent-500/10",
+                iconColor: "text-accent-600",
+                accent: "border-l-accent-500",
               },
               {
                 step: "03",
                 icon: Lightbulb,
                 title: "Create",
                 desc: "Turn your discovery into action. Whether it's a career pivot, a side project, or a new business — get micro-mentorship and co-creation support to make it real.",
-                bg: "bg-warm-400/10",
-                iconColor: "text-warm-600",
-                accent: "border-l-warm-400",
+                bg: "bg-neutral-400/10",
+                iconColor: "text-neutral-600",
+                accent: "border-l-neutral-400",
               },
-            ].map(({ step, icon: Icon, title, desc, bg, iconColor, accent }, i) => (
-              <FadeIn key={step} delay={i * 150}>
-                <div className={`relative border-l-4 ${accent} pl-6 md:border-l-0 md:pl-0 md:text-center`}>
-                  <div className="font-heading text-4xl text-sage-200 mb-3 md:mb-4">
-                    {step}
-                  </div>
+            ].map(
+              ({ step, icon: Icon, title, desc, bg, iconColor, accent }, i) => (
+                <FadeIn key={step} delay={i * 150}>
                   <div
-                    className={`w-14 h-14 ${bg} rounded-2xl flex items-center justify-center mb-4 md:mx-auto`}
+                    className={`relative border-l-4 ${accent} pl-6 md:border-l-0 md:pl-0 md:text-center`}
                   >
-                    <Icon className={`w-7 h-7 ${iconColor}`} />
+                    <div className="font-heading text-4xl text-primary-200 mb-3 md:mb-4 font-bold">
+                      {step}
+                    </div>
+                    <div
+                      className={`w-14 h-14 ${bg} rounded-2xl flex items-center justify-center mb-4 md:mx-auto`}
+                    >
+                      <Icon className={`w-7 h-7 ${iconColor}`} />
+                    </div>
+                    <h3 className="font-semibold text-xl mb-3 text-neutral-800">
+                      {title}
+                    </h3>
+                    <p className="text-neutral-600 leading-relaxed">{desc}</p>
                   </div>
-                  <h3 className="font-semibold text-xl mb-3 text-warm-800">
-                    {title}
-                  </h3>
-                  <p className="text-warm-600 leading-relaxed">{desc}</p>
-                </div>
-              </FadeIn>
-            ))}
+                </FadeIn>
+              )
+            )}
           </div>
         </div>
       </section>
 
       {/* ─── STATS BAR ─── */}
-      <section className="px-6 py-20 bg-sage-800 text-white">
+      <section className="px-6 py-20 bg-neutral-900 text-white">
         <div className="max-w-5xl mx-auto text-center">
           <FadeIn>
-            <h2 className="font-heading text-3xl md:text-4xl mb-14">
+            <h2 className="font-heading text-3xl md:text-4xl font-bold mb-14">
               The numbers behind the movement
             </h2>
           </FadeIn>
@@ -430,12 +495,12 @@ export default function Home() {
             ].map(({ value, suffix, prefix, label, source }) => (
               <FadeIn key={label}>
                 <div>
-                  <div className="text-3xl md:text-4xl font-bold text-sage-200 mb-1">
+                  <div className="text-3xl md:text-4xl font-bold text-primary-400 mb-1">
                     {prefix}
                     <AnimatedNumber value={value} suffix={suffix} />
                   </div>
-                  <div className="text-sage-300 text-sm mb-1">{label}</div>
-                  <div className="text-sage-500 text-xs">{source}</div>
+                  <div className="text-neutral-300 text-sm mb-1">{label}</div>
+                  <div className="text-neutral-500 text-xs">{source}</div>
                 </div>
               </FadeIn>
             ))}
@@ -446,35 +511,36 @@ export default function Home() {
       {/* ─── WHO IS THIS FOR ─── */}
       <section className="px-6 py-20 max-w-4xl mx-auto">
         <FadeIn>
-          <h2 className="font-heading text-3xl md:text-4xl text-center mb-12 text-warm-800">
+          <h2 className="font-heading text-3xl md:text-4xl font-bold text-center mb-12 text-neutral-900">
             Is this for you?
           </h2>
         </FadeIn>
         <div className="grid md:grid-cols-2 gap-6">
           {[
             {
-              title: "The anxious professional",
-              desc: "You see AI reshaping your industry and wonder: will my skills still matter in 3 years?",
+              title:
+                "The senior professional watching AI reshape your industry",
+              desc: "You've built a 15-year career in law, finance, or consulting. You're good at what you do — but the work itself is changing. You need clarity, not another webinar.",
             },
             {
-              title: "The stuck mid-career worker",
-              desc: "You're good at your job but feel no purpose. Sunday evenings fill you with dread.",
+              title: "The leader carrying a team through transformation",
+              desc: "Your company is restructuring around AI. You're expected to lead the change while privately wondering what it means for your own career.",
             },
             {
-              title: "The hidden teacher",
-              desc: "You have skills — woodworking, coding, design, cooking — and would love to share them with someone who needs them.",
+              title: "The expert whose expertise is being automated",
+              desc: "Your deep knowledge was your edge. Now an AI does 80% of it. You know you need to evolve — but into what?",
             },
             {
-              title: "The would-be builder",
-              desc: "You have an idea for something new but need co-creators, not another business course.",
+              title: "The builder who hasn't started yet",
+              desc: "You've had an idea for years — a consulting practice, a startup, a career pivot. You don't need another course. You need a framework and a push.",
             },
           ].map(({ title, desc }, i) => (
             <FadeIn key={title} delay={i * 100}>
-              <div className="p-6 rounded-2xl border border-warm-200 bg-white hover:border-sage-300 hover:shadow-sm transition-all h-full">
-                <h3 className="font-semibold text-lg mb-2 text-warm-800">
+              <div className="persona-card p-6 rounded-2xl border border-neutral-200 bg-white shadow-sm h-full">
+                <h3 className="font-semibold text-lg mb-2 text-neutral-800">
                   {title}
                 </h3>
-                <p className="text-warm-600">{desc}</p>
+                <p className="text-neutral-600">{desc}</p>
               </div>
             </FadeIn>
           ))}
@@ -482,43 +548,55 @@ export default function Home() {
       </section>
 
       {/* ─── FOUNDER ─── */}
-      <section className="px-6 py-20 bg-warm-100/50">
+      <section className="px-6 py-20 bg-neutral-50">
         <div className="max-w-4xl mx-auto">
           <FadeIn>
-            <h2 className="font-heading text-3xl md:text-4xl text-center mb-12 text-warm-800">
+            <h2 className="font-heading text-3xl md:text-4xl font-bold text-center mb-12 text-neutral-900">
               Who&apos;s behind this?
             </h2>
           </FadeIn>
           <FadeIn delay={150}>
             <div className="md:flex md:items-start md:gap-10">
-              {/* Photo */}
               <div className="shrink-0 mb-6 md:mb-0 mx-auto md:mx-0">
-                <div className="w-36 h-36 md:w-44 md:h-44 rounded-2xl bg-sage-100 border border-sage-200 overflow-hidden flex items-center justify-center">
-                  {/* Replace with <Image> when pedro.jpg is provided */}
-                  <span className="text-sage-400 text-sm text-center px-4">
+                <div className="w-36 h-36 md:w-44 md:h-44 rounded-2xl bg-neutral-100 border border-neutral-200 overflow-hidden flex items-center justify-center">
+                  <span className="text-neutral-400 text-sm text-center px-4">
                     Photo coming soon
                   </span>
                 </div>
               </div>
-              {/* Bio */}
               <div>
-                <h3 className="font-heading text-2xl text-warm-800 mb-1">
+                <h3 className="font-heading text-2xl font-bold text-neutral-900 mb-1">
                   Pedro Bandeira
                 </h3>
-                <p className="text-warm-500 text-sm mb-4">
-                  Founder, RepurposeToday
+                <p className="text-primary-600 text-sm font-medium mb-4">
+                  Serial entrepreneur. Five-time career reinventor.
                 </p>
-                <p className="text-warm-700 leading-relaxed mb-4">
-                  20 years building companies across Portugal, Spain, and Poland.
-                  Corporate wellbeing, tech startups, consulting — the works.
-                  Now building the platform he wished existed when AI started
-                  changing everything.
-                </p>
-                <blockquote className="border-l-4 border-sage-300 pl-4 italic text-warm-600 leading-relaxed">
-                  &quot;I didn&apos;t start this because I read a McKinsey report. I started it
-                  because I watched good people — smart people — freeze when they realized
-                  their skills might not matter in 3 years. That&apos;s not a reskilling
-                  problem. That&apos;s a purpose problem.&quot;
+                <div className="text-neutral-700 leading-relaxed mb-4 space-y-3">
+                  <p>
+                    I&apos;ve built companies in Portugal, Spain, France, and
+                    Poland over 20 years. Corporate wellbeing, SaaS, consulting,
+                    marketplaces — each one a reinvention. Not because I wanted
+                    variety, but because the world kept changing and I had to
+                    change with it.
+                  </p>
+                  <p>
+                    I&apos;m not a career coach. I&apos;m not certified in
+                    anything related to this. I&apos;m a practitioner — someone
+                    who&apos;s been through the exact transition you&apos;re
+                    facing, multiple times, and built a framework from what I
+                    learned.
+                  </p>
+                  <p>
+                    RepurposeToday exists because when I looked for something
+                    like this, it didn&apos;t exist. The reskilling industry
+                    sells courses. I wanted a framework and a community. So
+                    I&apos;m building both.
+                  </p>
+                </div>
+                <blockquote className="border-l-4 border-primary-300 pl-4 italic text-neutral-600 leading-relaxed">
+                  &quot;I didn&apos;t read about career reinvention in a
+                  textbook. I lived it — five times. This framework is what I
+                  wish I&apos;d had.&quot;
                 </blockquote>
               </div>
             </div>
@@ -529,12 +607,12 @@ export default function Home() {
       {/* ─── FAQ ─── */}
       <section className="px-6 py-20 max-w-3xl mx-auto">
         <FadeIn>
-          <h2 className="font-heading text-3xl md:text-4xl text-center mb-12 text-warm-800">
+          <h2 className="font-heading text-3xl md:text-4xl font-bold text-center mb-12 text-neutral-900">
             Questions you might have
           </h2>
         </FadeIn>
         <FadeIn delay={100}>
-          <div className="bg-white rounded-2xl border border-warm-200 px-6 md:px-8">
+          <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm px-6 md:px-8">
             <FAQItem
               q="Is this a course?"
               a="No. It's a guided experience — part self-discovery, part community, part action plan. No lectures, no certificates, no homework."
@@ -549,21 +627,21 @@ export default function Home() {
             />
             <FAQItem
               q="How much does it cost?"
-              a="The founding cohort is free. Future cohorts will be priced affordably — we're building this for real workers, not corporate budgets."
+              a="The founding cohort is free. Future cohorts will be priced affordably — we're building this for real professionals, not corporate budgets."
             />
           </div>
         </FadeIn>
       </section>
 
       {/* ─── FINAL CTA ─── */}
-      <section className="px-6 py-20 bg-warm-100/50">
+      <section className="px-6 py-20 bg-neutral-900">
         <div className="max-w-lg mx-auto text-center">
           <FadeIn>
-            <h2 className="font-heading text-3xl md:text-4xl mb-4 text-warm-800">
-              Your next chapter is waiting.
+            <h2 className="font-heading text-3xl md:text-4xl font-bold mb-4 text-white">
+              Your next chapter won&apos;t come from a course catalogue.
             </h2>
-            <p className="text-warm-600 mb-8">
-              10 people. 4 weeks. Starting April 2026. Free for founding members.
+            <p className="text-neutral-300 mb-8">
+              10 professionals. 4 weeks. One framework. Starting April 2026.
             </p>
           </FadeIn>
           {!submitted ? (
@@ -575,12 +653,12 @@ export default function Home() {
                   placeholder="Your email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-5 py-3.5 rounded-xl border border-warm-200 bg-white text-warm-900 placeholder:text-warm-400 focus:outline-none focus:ring-2 focus:ring-sage-400 focus:border-transparent"
+                  className="w-full px-5 py-3.5 rounded-xl border border-neutral-700 bg-neutral-800 text-white placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent"
                 />
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full px-5 py-3.5 rounded-xl bg-sage-600 hover:bg-sage-700 text-white font-semibold transition-colors disabled:opacity-60"
+                  className="cta-primary w-full px-5 py-3.5 rounded-xl bg-primary-500 hover:bg-primary-600 text-white font-semibold transition-colors disabled:opacity-60"
                 >
                   Reserve your spot
                 </button>
@@ -588,7 +666,7 @@ export default function Home() {
             </FadeIn>
           ) : (
             <FadeIn>
-              <p className="text-sage-700 font-medium">
+              <p className="text-primary-400 font-medium">
                 You&apos;re already on the list! We&apos;ll be in touch soon.
               </p>
             </FadeIn>
@@ -597,14 +675,35 @@ export default function Home() {
       </section>
 
       {/* ─── FOOTER ─── */}
-      <footer className="px-6 py-10 text-center text-warm-500 text-sm">
-        <p className="font-heading text-lg text-warm-700 mb-2">
+      <footer className="px-6 py-10 text-center text-neutral-500 text-sm">
+        <p className="font-heading text-lg font-bold text-neutral-700 mb-2">
           RepurposeToday
         </p>
-        <p>Your next chapter starts with a question, not a course.</p>
-        <p className="mt-4">
-          &copy; {new Date().getFullYear()} RepurposeToday. All rights reserved.
+        <p className="text-neutral-400 text-xs mb-3">
+          An{" "}
+          <a
+            href="https://analogai.co"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary-600 hover:text-primary-700 transition-colors"
+          >
+            Analog AI
+          </a>{" "}
+          program
         </p>
+        <p>Your next chapter starts with a question, not a course.</p>
+        <div className="mt-4 flex items-center justify-center gap-4 text-xs text-neutral-400">
+          <span>&copy; {new Date().getFullYear()} RepurposeToday</span>
+          <span>·</span>
+          <span>Photos by Pexels</span>
+          <span>·</span>
+          <button
+            onClick={clearTranslation}
+            className="text-primary-600 hover:text-primary-700 transition-colors"
+          >
+            View in English
+          </button>
+        </div>
       </footer>
     </main>
   );
