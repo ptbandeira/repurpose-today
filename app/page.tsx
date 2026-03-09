@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, type ReactNode } from "react";
+import { useState, useEffect, useRef, useCallback, type ReactNode } from "react";
 import Image from "next/image";
 import {
   BookOpen,
@@ -9,6 +9,7 @@ import {
   Users,
   Lightbulb,
   ChevronDown,
+  ArrowRight,
 } from "lucide-react";
 import { track } from "@vercel/analytics";
 
@@ -108,9 +109,10 @@ function FAQItem({ q, a }: { q: string; a: string }) {
           if (!open) track("faq_opened", { question: q });
           setOpen(!open);
         }}
-        className="w-full flex items-center justify-between py-5 text-left group"
+        className="w-full flex items-center justify-between py-5 text-left group min-h-[44px]"
+        aria-expanded={open}
       >
-        <span className="font-semibold text-neutral-800 group-hover:text-primary-600 transition-colors pr-4">
+        <span className="font-semibold text-neutral-800 group-hover:text-primary-700 transition-colors pr-4">
           {q}
         </span>
         <ChevronDown
@@ -151,12 +153,300 @@ function HeroHeadline({ text }: { text: string }) {
   );
 }
 
+// ─── Sticky Navigation ───
+function StickyNav() {
+  const [scrolled, setScrolled] = useState(false);
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 100);
+      const winScroll = document.documentElement.scrollTop;
+      const height =
+        document.documentElement.scrollHeight -
+        document.documentElement.clientHeight;
+      setProgress(height > 0 ? (winScroll / height) * 100 : 0);
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  return (
+    <nav
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+        scrolled
+          ? "bg-white/95 backdrop-blur-sm shadow-sm"
+          : "bg-transparent pointer-events-none"
+      }`}
+      aria-label="Main navigation"
+    >
+      <div
+        className="absolute bottom-0 left-0 h-0.5 bg-primary-500 transition-all duration-150"
+        style={{ width: `${progress}%` }}
+      />
+      <div
+        className={`max-w-6xl mx-auto px-6 flex items-center justify-between h-16 transition-opacity duration-300 ${
+          scrolled ? "opacity-100 pointer-events-auto" : "opacity-0"
+        }`}
+      >
+        <a href="#hero" className="font-bold text-lg text-neutral-900">
+          RepurposeToday
+        </a>
+        <div className="hidden md:flex items-center gap-8">
+          {[
+            { href: "#framework", label: "Framework" },
+            { href: "#personas", label: "For You" },
+            { href: "#faq", label: "FAQ" },
+            { href: "#founder", label: "Founder" },
+          ].map(({ href, label }) => (
+            <a
+              key={href}
+              href={href}
+              className="text-sm text-neutral-600 hover:text-neutral-900 transition-colors min-h-[44px] flex items-center"
+            >
+              {label}
+            </a>
+          ))}
+          <a
+            href="#signup"
+            className="text-sm font-semibold text-white bg-primary-500 hover:bg-primary-600 px-5 py-2.5 rounded-lg transition-colors min-h-[44px] flex items-center"
+          >
+            Join Free
+          </a>
+        </div>
+        <a
+          href="#signup"
+          className="md:hidden text-sm font-semibold text-white bg-primary-500 px-4 py-2.5 rounded-lg min-h-[44px] flex items-center"
+        >
+          Join
+        </a>
+      </div>
+    </nav>
+  );
+}
+
+// ─── Floating Mobile CTA ───
+function FloatingMobileCTA() {
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const heroHeight = window.innerHeight * 0.8;
+      const signupEl = document.getElementById("signup");
+      const signupTop = signupEl
+        ? signupEl.getBoundingClientRect().top
+        : Infinity;
+      setVisible(window.scrollY > heroHeight && signupTop > window.innerHeight);
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  if (!visible) return null;
+
+  return (
+    <div className="md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-40">
+      <a
+        href="#signup"
+        className="cta-primary px-8 py-3.5 bg-primary-500 text-white font-semibold rounded-full shadow-lg text-sm inline-block min-h-[44px]"
+      >
+        Join Free — 10 Spots Left
+      </a>
+    </div>
+  );
+}
+
+// ─── Two-Step Signup Form ───
+function SignupForm({
+  preselectedSituation,
+}: {
+  preselectedSituation: string;
+}) {
+  const [step, setStep] = useState(1);
+  const [email, setEmail] = useState("");
+  const [situation, setSituation] = useState(preselectedSituation);
+  const [submitting, setSubmitting] = useState(false);
+  const [done, setDone] = useState(false);
+
+  useEffect(() => {
+    if (preselectedSituation) setSituation(preselectedSituation);
+  }, [preselectedSituation]);
+
+  const handleEmailSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email) return;
+    setSubmitting(true);
+    try {
+      await fetch("/api/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      track("signup_email", { email_domain: email.split("@")[1] || "unknown" });
+    } catch {
+      // Supabase handles persistence
+    }
+    setSubmitting(false);
+    setStep(2);
+  };
+
+  const handleFinalSubmit = async () => {
+    setSubmitting(true);
+    try {
+      await fetch("/api/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email,
+          situation,
+          type: "persona_update",
+        }),
+      });
+      track("signup_complete", {
+        persona: situation,
+        email_domain: email.split("@")[1] || "unknown",
+      });
+    } catch {
+      // Supabase handles persistence
+    }
+    setDone(true);
+    setSubmitting(false);
+  };
+
+  if (done) {
+    return (
+      <div className="text-center space-y-4 animate-fade-in">
+        <p className="text-2xl font-bold text-white">You&apos;re in.</p>
+        <p className="text-neutral-300">
+          Check your inbox. Share with a colleague navigating change.
+        </p>
+        <div className="flex justify-center gap-4 mt-4">
+          <a
+            href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent("https://repurposetoday.com")}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-4 py-2 bg-neutral-700 hover:bg-neutral-600 text-white text-sm rounded-lg transition-colors min-h-[44px] flex items-center"
+          >
+            Share on LinkedIn
+          </a>
+          <a
+            href={`https://wa.me/?text=${encodeURIComponent("I just joined RepurposeToday — a career reinvention framework for professionals in the AI age. Check it out: https://repurposetoday.com")}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-4 py-2 bg-neutral-700 hover:bg-neutral-600 text-white text-sm rounded-lg transition-colors min-h-[44px] flex items-center"
+          >
+            Share on WhatsApp
+          </a>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-md mx-auto">
+      {step === 1 && (
+        <form onSubmit={handleEmailSubmit} className="flex gap-3">
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Your email"
+            required
+            aria-label="Email address"
+            className="flex-1 px-5 py-3.5 rounded-xl border border-neutral-700 bg-neutral-800 text-white placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent min-h-[44px]"
+          />
+          <button
+            type="submit"
+            disabled={submitting}
+            className="cta-primary px-6 py-3.5 bg-primary-500 hover:bg-primary-600 text-white font-semibold rounded-xl transition-colors disabled:opacity-60 min-h-[44px]"
+          >
+            {submitting ? "..." : "Join"}
+          </button>
+        </form>
+      )}
+
+      {step === 2 && (
+        <div className="space-y-4 animate-fade-in">
+          <p className="text-sm text-neutral-400">
+            One quick question — helps us personalize your experience:
+          </p>
+          <select
+            value={situation}
+            onChange={(e) => setSituation(e.target.value)}
+            aria-label="Your current situation"
+            className="w-full px-5 py-3.5 rounded-xl border border-neutral-700 bg-neutral-800 text-white focus:outline-none focus:ring-2 focus:ring-primary-400 min-h-[44px]"
+          >
+            <option value="">What best describes you?</option>
+            <option value="senior-professional">
+              Senior professional watching AI reshape my industry
+            </option>
+            <option value="transformation-leader">
+              Leading a team through AI transformation
+            </option>
+            <option value="expertise-automated">
+              My expertise is being automated
+            </option>
+            <option value="builder">Ready to build something new</option>
+            <option value="other">Something else</option>
+          </select>
+          <button
+            onClick={handleFinalSubmit}
+            disabled={submitting}
+            className="w-full px-6 py-3.5 bg-primary-500 hover:bg-primary-600 text-white font-semibold rounded-xl transition-colors disabled:opacity-60 min-h-[44px]"
+          >
+            {submitting ? "Joining..." : "Complete signup"}
+          </button>
+          <button
+            onClick={handleFinalSubmit}
+            className="text-sm text-neutral-500 hover:text-neutral-400 underline transition-colors min-h-[44px] w-full"
+          >
+            Skip — just sign me up
+          </button>
+        </div>
+      )}
+
+      <p className="text-xs text-neutral-500 mt-3 text-center">
+        Free for founding members. No credit card. No spam.
+      </p>
+    </div>
+  );
+}
+
+// ─── Persona data ───
+const personas = [
+  {
+    title: "The senior professional watching AI reshape your industry",
+    desc: "You've built a 15-year career in law, finance, or consulting. You're good at what you do — but the work itself is changing. You need clarity, not another webinar.",
+    img: "/images/persona-1.jpg",
+    alt: "Senior professional reflecting on career direction",
+    situation: "senior-professional",
+  },
+  {
+    title: "The leader carrying a team through transformation",
+    desc: "Your company is restructuring around AI. You're expected to lead the change while privately wondering what it means for your own career.",
+    img: "/images/persona-2.jpg",
+    alt: "Team collaborating in modern office",
+    situation: "transformation-leader",
+  },
+  {
+    title: "The expert whose expertise is being automated",
+    desc: "Your deep knowledge was your edge. Now an AI does 80% of it. You know you need to evolve — but into what?",
+    img: "/images/persona-3.jpg",
+    alt: "Professional focused on laptop work",
+    situation: "expertise-automated",
+  },
+  {
+    title: "The builder who hasn't started yet",
+    desc: "You've had an idea for years — a consulting practice, a startup, a career pivot. You don't need another course. You need a framework and a push.",
+    img: "/images/persona-4.jpg",
+    alt: "Entrepreneur thinking about new project",
+    situation: "builder",
+  },
+];
+
 // ─── Main Page ───
 export default function Home() {
-  const [email, setEmail] = useState("");
-  const [situation, setSituation] = useState("");
-  const [submitted, setSubmitted] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [preselectedSituation, setPreselectedSituation] = useState("");
 
   // Google Translate auto-detect (once per session)
   useEffect(() => {
@@ -168,34 +458,17 @@ export default function Home() {
     }
   }, []);
 
-  // Hero parallax
+  // Hero video parallax (subtle)
   useEffect(() => {
     const handleScroll = () => {
       const heroEl = document.querySelector(".hero-bg") as HTMLElement;
-      if (heroEl)
-        heroEl.style.transform = `translateY(${window.scrollY * 0.3}px)`;
+      if (heroEl && window.scrollY < window.innerHeight) {
+        heroEl.style.transform = `translateY(${window.scrollY * 0.15}px)`;
+      }
     };
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email) return;
-    setLoading(true);
-    try {
-      await fetch("/api/signup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, situation }),
-      });
-    } catch {
-      // Silently fail — Supabase handles persistence
-    }
-    track("signup", { email_domain: email.split("@")[1] || "unknown" });
-    setSubmitted(true);
-    setLoading(false);
-  };
 
   const clearTranslation = () => {
     document.cookie =
@@ -204,22 +477,36 @@ export default function Home() {
     window.location.reload();
   };
 
+  const handlePersonaClick = useCallback((situationValue: string) => {
+    setPreselectedSituation(situationValue);
+    track("persona_card_clicked", { persona: situationValue });
+    document.getElementById("signup")?.scrollIntoView({ behavior: "smooth" });
+  }, []);
+
   return (
     <main className="min-h-screen">
+      <StickyNav />
+      <FloatingMobileCTA />
+
       {/* ─── HERO ─── */}
-      <section className="relative px-6 py-24 md:py-32 overflow-hidden">
+      <section
+        id="hero"
+        className="relative px-6 py-24 md:py-32 overflow-hidden"
+      >
         <div className="absolute inset-0 hero-bg">
-          <Image
-            src="/images/hero-bg.jpg"
-            alt="Professional at work"
-            fill
-            priority
-            className="object-cover"
-            sizes="100vw"
-          />
-          <div className="absolute inset-0 bg-gradient-to-br from-white/90 via-white/80 to-primary-50/70" />
+          <video
+            autoPlay
+            muted
+            loop
+            playsInline
+            className="w-full h-full object-cover"
+            poster="/images/hero-bg.jpg"
+          >
+            <source src="/images/hero-video.mp4" type="video/mp4" />
+          </video>
+          <div className="absolute inset-0 bg-gradient-to-br from-white/90 via-white/85 to-primary-50/75" />
         </div>
-        <div className="relative z-10 max-w-4xl mx-auto text-center">
+        <div className="relative z-10 max-w-4xl mx-auto text-center pt-8">
           <FadeIn>
             <div className="mb-6">
               <span className="inline-block px-4 py-1.5 bg-primary-100 text-primary-700 text-sm font-medium rounded-full">
@@ -233,90 +520,24 @@ export default function Home() {
           <FadeIn delay={200}>
             <p className="text-lg md:text-xl text-neutral-600 max-w-2xl mx-auto mb-10 leading-relaxed">
               92 million jobs will be restructured by 2030. The reskilling
-              industry says: take a course. We built a framework to help you
-              find your purpose first — then the skills follow.
+              industry says: take a course. We built a framework to help you find
+              your purpose first — then the skills follow.
             </p>
           </FadeIn>
 
-          {!submitted ? (
-            <FadeIn delay={400}>
-              <form
-                onSubmit={handleSubmit}
-                className="max-w-md mx-auto space-y-3"
+          <FadeIn delay={400}>
+            <div className="max-w-md mx-auto">
+              <a
+                href="#signup"
+                className="cta-primary inline-block w-full px-5 py-3.5 rounded-xl bg-primary-500 hover:bg-primary-600 text-white font-semibold text-base transition-colors text-center min-h-[44px]"
               >
-                <input
-                  type="email"
-                  required
-                  placeholder="Your email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-5 py-3.5 rounded-xl border border-neutral-200 bg-white text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent text-base"
-                />
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="cta-primary w-full px-5 py-3.5 rounded-xl bg-primary-500 hover:bg-primary-600 text-white font-semibold text-base transition-colors disabled:opacity-60"
-                >
-                  {loading
-                    ? "Joining..."
-                    : "Join the founding cohort — 10 spots"}
-                </button>
-                <p className="text-sm text-neutral-500">
-                  Starting April 2026 · Free for founding members · No spam
-                </p>
-              </form>
-            </FadeIn>
-          ) : (
-            <FadeIn>
-              <div className="max-w-md mx-auto p-6 bg-primary-50 rounded-2xl border border-primary-200">
-                <p className="text-primary-800 font-semibold text-lg mb-2">
-                  You&apos;re in.
-                </p>
-                <p className="text-primary-700">
-                  We&apos;ll reach out when the founding cohort opens. One quick
-                  question:
-                </p>
-                <div className="mt-4 space-y-2">
-                  {[
-                    "I feel stuck in my career and want direction",
-                    "I'm worried AI will affect my job",
-                    "I want to learn new skills but don't know which ones",
-                    "I have skills to share and want to teach others",
-                    "I want to build something new but need co-creators",
-                  ].map((option) => (
-                    <button
-                      key={option}
-                      onClick={() => {
-                        setSituation(option);
-                        fetch("/api/signup", {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({
-                            email,
-                            situation: option,
-                            type: "persona_update",
-                          }),
-                        }).catch(() => {});
-                        track("persona_selected", { persona: option });
-                      }}
-                      className={`w-full text-left px-4 py-3 rounded-lg border text-sm transition-colors ${
-                        situation === option
-                          ? "border-primary-500 bg-primary-100 text-primary-800"
-                          : "border-neutral-200 bg-white text-neutral-700 hover:border-primary-300"
-                      }`}
-                    >
-                      {option}
-                    </button>
-                  ))}
-                </div>
-                {situation && (
-                  <p className="mt-4 text-primary-600 text-sm">
-                    Thank you! This helps us build the right experience for you.
-                  </p>
-                )}
-              </div>
-            </FadeIn>
-          )}
+                Join the founding cohort — 10 spots
+              </a>
+              <p className="text-sm text-neutral-500 mt-3">
+                Starting April 2026 · Free for founding members · No spam
+              </p>
+            </div>
+          </FadeIn>
         </div>
       </section>
 
@@ -383,8 +604,8 @@ export default function Home() {
                 </h3>
                 <p className="text-neutral-700">
                   A way to discover your purpose first. A community of people
-                  navigating the same transition. Real humans to learn from —
-                  not just screens.
+                  navigating the same transition. Real humans to learn from — not
+                  just screens.
                 </p>
               </div>
             </FadeIn>
@@ -392,75 +613,8 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ─── THE REPURPOSE FRAMEWORK™ ─── */}
-      <section className="px-6 py-20 max-w-5xl mx-auto">
-        <FadeIn>
-          <h2 className="font-heading text-3xl md:text-4xl font-bold text-center mb-4 text-neutral-900">
-            The Repurpose Framework™
-          </h2>
-          <p className="text-center text-neutral-600 mb-16 max-w-2xl mx-auto">
-            Not a course. Not a quiz. A guided framework for career
-            reinvention.
-          </p>
-        </FadeIn>
-
-        <div className="relative">
-          <div className="hidden md:block absolute top-10 left-[16.67%] right-[16.67%] h-px bg-primary-200" />
-
-          <div className="grid md:grid-cols-3 gap-10 md:gap-8">
-            {[
-              {
-                step: "01",
-                icon: Search,
-                title: "Discover",
-                desc: "An AI-guided Ikigai assessment that maps what you love, what you're good at, what the world needs, and what you can earn from. Not a quiz — a conversation that evolves over weeks.",
-                bg: "bg-primary-400/10",
-                iconColor: "text-primary-500",
-                accent: "border-l-primary-400",
-              },
-              {
-                step: "02",
-                icon: Users,
-                title: "Connect",
-                desc: "Join a cohort of 10 people navigating the same transition. Meet weekly. Share openly. Find a consulting partner, a technical co-founder, or a mentor who's already made the transition you're planning.",
-                bg: "bg-accent-500/10",
-                iconColor: "text-accent-600",
-                accent: "border-l-accent-500",
-              },
-              {
-                step: "03",
-                icon: Lightbulb,
-                title: "Create",
-                desc: "Turn your discovery into action. Whether it's a career pivot, a side project, or a new business — get micro-mentorship and co-creation support to make it real.",
-                bg: "bg-neutral-400/10",
-                iconColor: "text-neutral-600",
-                accent: "border-l-neutral-400",
-              },
-            ].map(
-              ({ step, icon: Icon, title, desc, bg, iconColor, accent }, i) => (
-                <FadeIn key={step} delay={i * 150}>
-                  <div
-                    className={`relative border-l-4 ${accent} pl-6 md:border-l-0 md:pl-0 md:text-center`}
-                  >
-                    <div className="font-heading text-4xl text-primary-200 mb-3 md:mb-4 font-bold">
-                      {step}
-                    </div>
-                    <div
-                      className={`w-14 h-14 ${bg} rounded-2xl flex items-center justify-center mb-4 md:mx-auto`}
-                    >
-                      <Icon className={`w-7 h-7 ${iconColor}`} />
-                    </div>
-                    <h3 className="font-semibold text-xl mb-3 text-neutral-800">
-                      {title}
-                    </h3>
-                    <p className="text-neutral-600 leading-relaxed">{desc}</p>
-                  </div>
-                </FadeIn>
-              )
-            )}
-          </div>
-        </div>
-      </section>
+      {/* ─── THE REPURPOSE FRAMEWORK™ (Interactive) ─── */}
+      <FrameworkSection />
 
       {/* ─── STATS BAR ─── */}
       <section className="px-6 py-20 bg-neutral-900 text-white">
@@ -520,42 +674,16 @@ export default function Home() {
       </section>
 
       {/* ─── WHO IS THIS FOR ─── */}
-      <section className="px-6 py-20 max-w-4xl mx-auto">
+      <section id="personas" className="px-6 py-20 max-w-4xl mx-auto">
         <FadeIn>
           <h2 className="font-heading text-3xl md:text-4xl font-bold text-center mb-12 text-neutral-900">
             Is this for you?
           </h2>
         </FadeIn>
         <div className="grid md:grid-cols-2 gap-6">
-          {[
-            {
-              title:
-                "The senior professional watching AI reshape your industry",
-              desc: "You've built a 15-year career in law, finance, or consulting. You're good at what you do — but the work itself is changing. You need clarity, not another webinar.",
-              img: "/images/persona-1.jpg",
-              alt: "Senior professional reflecting on career direction",
-            },
-            {
-              title: "The leader carrying a team through transformation",
-              desc: "Your company is restructuring around AI. You're expected to lead the change while privately wondering what it means for your own career.",
-              img: "/images/persona-2.jpg",
-              alt: "Team collaborating in modern office",
-            },
-            {
-              title: "The expert whose expertise is being automated",
-              desc: "Your deep knowledge was your edge. Now an AI does 80% of it. You know you need to evolve — but into what?",
-              img: "/images/persona-3.jpg",
-              alt: "Professional focused on laptop work",
-            },
-            {
-              title: "The builder who hasn't started yet",
-              desc: "You've had an idea for years — a consulting practice, a startup, a career pivot. You don't need another course. You need a framework and a push.",
-              img: "/images/persona-4.jpg",
-              alt: "Entrepreneur thinking about new project",
-            },
-          ].map(({ title, desc, img, alt }, i) => (
+          {personas.map(({ title, desc, img, alt, situation }, i) => (
             <FadeIn key={title} delay={i * 100}>
-              <div className="persona-card rounded-2xl border border-neutral-200 bg-white shadow-sm h-full overflow-hidden">
+              <div className="persona-card rounded-2xl border border-neutral-200 bg-white shadow-sm h-full overflow-hidden flex flex-col">
                 <div className="relative h-48 w-full">
                   <Image
                     src={img}
@@ -566,11 +694,19 @@ export default function Home() {
                     loading="lazy"
                   />
                 </div>
-                <div className="p-6">
+                <div className="p-6 flex flex-col flex-1">
                   <h3 className="font-semibold text-lg mb-2 text-neutral-800">
                     {title}
                   </h3>
-                  <p className="text-neutral-600">{desc}</p>
+                  <p className="text-neutral-600 flex-1">{desc}</p>
+                  <button
+                    onClick={() => handlePersonaClick(situation)}
+                    className="mt-4 flex items-center gap-2 text-primary-700 hover:text-primary-800 font-medium text-sm transition-colors min-h-[44px]"
+                    aria-label={`This is me — join as ${title}`}
+                  >
+                    This is me
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
             </FadeIn>
@@ -578,8 +714,45 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ─── FAQ (moved before Founder) ─── */}
+      <section id="faq" className="px-6 py-20 max-w-3xl mx-auto">
+        <FadeIn>
+          <h2 className="font-heading text-3xl md:text-4xl font-bold text-center mb-12 text-neutral-900">
+            Questions you might have
+          </h2>
+        </FadeIn>
+        <FadeIn delay={100}>
+          <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm px-6 md:px-8">
+            <FAQItem
+              q="Is this a course?"
+              a="No. It's a guided experience — part self-discovery, part community, part action plan. No lectures, no certificates, no homework."
+            />
+            <FAQItem
+              q="Do I need to be tech-savvy?"
+              a="Not at all. If you can use email and video calls, you're ready. This isn't about learning AI — it's about finding your path through the AI transition."
+            />
+            <FAQItem
+              q="Can I do this alongside my current job?"
+              a="Absolutely. The framework is designed for working professionals. Expect about 3-4 hours per week — one group session plus some self-reflection exercises."
+            />
+            <FAQItem
+              q="What makes this different from career coaching?"
+              a="Career coaches give you advice. We give you a framework, a peer group, and structured exercises to figure it out yourself. The answers come from within — we just provide the structure."
+            />
+            <FAQItem
+              q="What happens after the 4 weeks?"
+              a="You'll have a clear direction, a support network, and an action plan. Many participants continue meeting with their cohort independently."
+            />
+            <FAQItem
+              q="How much does it cost?"
+              a="The founding cohort is free. Future cohorts will be priced affordably — we're building this for real professionals, not corporate budgets."
+            />
+          </div>
+        </FadeIn>
+      </section>
+
       {/* ─── FOUNDER ─── */}
-      <section className="px-6 py-20 bg-neutral-50">
+      <section id="founder" className="px-6 py-20 bg-neutral-50">
         <div className="max-w-4xl mx-auto">
           <FadeIn>
             <h2 className="font-heading text-3xl md:text-4xl font-bold text-center mb-12 text-neutral-900">
@@ -599,7 +772,7 @@ export default function Home() {
                 <h3 className="font-heading text-2xl font-bold text-neutral-900 mb-1">
                   Pedro Bandeira
                 </h3>
-                <p className="text-primary-600 text-sm font-medium mb-4">
+                <p className="text-primary-700 text-sm font-medium mb-4">
                   Serial entrepreneur. Five-time career reinventor.
                 </p>
                 <div className="text-neutral-700 leading-relaxed mb-4 space-y-3">
@@ -635,37 +808,8 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ─── FAQ ─── */}
-      <section className="px-6 py-20 max-w-3xl mx-auto">
-        <FadeIn>
-          <h2 className="font-heading text-3xl md:text-4xl font-bold text-center mb-12 text-neutral-900">
-            Questions you might have
-          </h2>
-        </FadeIn>
-        <FadeIn delay={100}>
-          <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm px-6 md:px-8">
-            <FAQItem
-              q="Is this a course?"
-              a="No. It's a guided experience — part self-discovery, part community, part action plan. No lectures, no certificates, no homework."
-            />
-            <FAQItem
-              q="Do I need to be tech-savvy?"
-              a="Not at all. If you can use email and video calls, you're ready. This isn't about learning AI — it's about finding your path through the AI transition."
-            />
-            <FAQItem
-              q="What happens after the 4 weeks?"
-              a="You'll have a clear direction, a support network, and an action plan. Many participants continue meeting with their cohort independently."
-            />
-            <FAQItem
-              q="How much does it cost?"
-              a="The founding cohort is free. Future cohorts will be priced affordably — we're building this for real professionals, not corporate budgets."
-            />
-          </div>
-        </FadeIn>
-      </section>
-
-      {/* ─── FINAL CTA ─── */}
-      <section className="px-6 py-20 bg-neutral-900">
+      {/* ─── FINAL CTA + SIGNUP ─── */}
+      <section id="signup" className="px-6 py-20 bg-neutral-900">
         <div className="max-w-lg mx-auto text-center">
           <FadeIn>
             <h2 className="font-heading text-3xl md:text-4xl font-bold mb-4 text-white">
@@ -675,33 +819,9 @@ export default function Home() {
               10 professionals. 4 weeks. One framework. Starting April 2026.
             </p>
           </FadeIn>
-          {!submitted ? (
-            <FadeIn delay={150}>
-              <form onSubmit={handleSubmit} className="space-y-3">
-                <input
-                  type="email"
-                  required
-                  placeholder="Your email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-5 py-3.5 rounded-xl border border-neutral-700 bg-neutral-800 text-white placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent"
-                />
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="cta-primary w-full px-5 py-3.5 rounded-xl bg-primary-500 hover:bg-primary-600 text-white font-semibold transition-colors disabled:opacity-60"
-                >
-                  Reserve your spot
-                </button>
-              </form>
-            </FadeIn>
-          ) : (
-            <FadeIn>
-              <p className="text-primary-400 font-medium">
-                You&apos;re already on the list! We&apos;ll be in touch soon.
-              </p>
-            </FadeIn>
-          )}
+          <FadeIn delay={150}>
+            <SignupForm preselectedSituation={preselectedSituation} />
+          </FadeIn>
         </div>
       </section>
 
@@ -716,7 +836,7 @@ export default function Home() {
             href="https://analogai.co"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-primary-600 hover:text-primary-700 transition-colors"
+            className="text-primary-700 hover:text-primary-800 transition-colors"
           >
             Analog AI
           </a>{" "}
@@ -726,16 +846,173 @@ export default function Home() {
         <div className="mt-4 flex items-center justify-center gap-4 text-xs text-neutral-400">
           <span>&copy; {new Date().getFullYear()} RepurposeToday</span>
           <span>·</span>
-          <span>Photos by Pexels</span>
+          <span>Photos &amp; video by Pexels</span>
           <span>·</span>
           <button
             onClick={clearTranslation}
-            className="text-primary-600 hover:text-primary-700 transition-colors"
+            className="text-primary-700 hover:text-primary-800 transition-colors min-h-[44px] flex items-center"
           >
             View in English
           </button>
         </div>
       </footer>
     </main>
+  );
+}
+
+// ─── Interactive Framework Section ───
+function FrameworkSection() {
+  const [activeStep, setActiveStep] = useState<number | null>(null);
+
+  const steps = [
+    {
+      num: 1,
+      icon: Search,
+      title: "Discover",
+      short: "Map your transferable value",
+      detail:
+        "An AI-guided Ikigai assessment that maps what you love, what you're good at, what the world needs, and what you can earn from. Not a quiz — a conversation that evolves over weeks.",
+      bg: "bg-primary-400/10",
+      iconColor: "text-primary-500",
+    },
+    {
+      num: 2,
+      icon: Users,
+      title: "Connect",
+      short: "Find your people",
+      detail:
+        "Join a cohort of 10 people navigating the same transition. Meet weekly. Share openly. Find a consulting partner, a technical co-founder, or a mentor who's already made the transition you're planning.",
+      bg: "bg-accent-500/10",
+      iconColor: "text-accent-600",
+    },
+    {
+      num: 3,
+      icon: Lightbulb,
+      title: "Create",
+      short: "Build your next chapter",
+      detail:
+        "Turn your discovery into action. Whether it's a career pivot, a side project, or a new business — get micro-mentorship and co-creation support to make it real.",
+      bg: "bg-neutral-400/10",
+      iconColor: "text-neutral-600",
+    },
+  ];
+
+  return (
+    <section id="framework" className="px-6 py-20 bg-white">
+      <div className="max-w-5xl mx-auto">
+        <FadeIn>
+          <h2 className="font-heading text-3xl md:text-4xl font-bold text-center mb-4 text-neutral-900">
+            The Repurpose Framework™
+          </h2>
+          <p className="text-center text-neutral-600 mb-16 max-w-2xl mx-auto">
+            Not a course. Not a quiz. A guided framework for career reinvention.
+          </p>
+        </FadeIn>
+
+        {/* Desktop: horizontal timeline */}
+        <div className="hidden md:flex items-start justify-between relative">
+          <div className="absolute top-8 left-[16%] right-[16%] h-0.5 bg-neutral-200" />
+
+          {steps.map(({ num, icon: Icon, title, short, detail, bg, iconColor }) => (
+            <FadeIn key={num} delay={num * 100} className="flex-1 text-center px-6">
+              <button
+                onClick={() =>
+                  setActiveStep(activeStep === num ? null : num)
+                }
+                className="w-full cursor-pointer group"
+                aria-expanded={activeStep === num}
+                aria-label={`Step ${num}: ${title}`}
+              >
+                <div
+                  className={`w-16 h-16 rounded-full mx-auto flex items-center justify-center text-2xl font-bold relative z-10 transition-colors ${
+                    activeStep === num
+                      ? "bg-primary-500 text-white"
+                      : "bg-neutral-100 text-neutral-700 group-hover:bg-primary-100"
+                  }`}
+                >
+                  {num}
+                </div>
+                <div
+                  className={`w-14 h-14 ${bg} rounded-2xl flex items-center justify-center mt-4 mx-auto`}
+                >
+                  <Icon className={`w-7 h-7 ${iconColor}`} />
+                </div>
+                <h3 className="text-xl font-bold mt-4 mb-2 text-neutral-800">
+                  {title}
+                </h3>
+                <p className="text-neutral-600 text-sm">{short}</p>
+              </button>
+
+              {activeStep === num && (
+                <p className="text-neutral-500 text-sm mt-3 animate-fade-in">
+                  {detail}
+                </p>
+              )}
+            </FadeIn>
+          ))}
+        </div>
+
+        {/* Mobile: vertical list */}
+        <div className="md:hidden space-y-8">
+          {steps.map(({ num, icon: Icon, title, short, detail, bg, iconColor }) => (
+            <FadeIn key={num} delay={num * 100}>
+              <button
+                onClick={() =>
+                  setActiveStep(activeStep === num ? null : num)
+                }
+                className="flex gap-4 text-left w-full min-h-[44px]"
+                aria-expanded={activeStep === num}
+                aria-label={`Step ${num}: ${title}`}
+              >
+                <div
+                  className={`w-12 h-12 rounded-full flex items-center justify-center font-bold shrink-0 transition-colors ${
+                    activeStep === num
+                      ? "bg-primary-500 text-white"
+                      : "bg-neutral-100 text-neutral-700"
+                  }`}
+                >
+                  {num}
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-bold text-lg text-neutral-800">
+                    {title}
+                  </h3>
+                  <p className="text-neutral-600 text-sm mt-1">{short}</p>
+                  {activeStep === num && (
+                    <p className="text-neutral-500 text-sm mt-2 animate-fade-in">
+                      {detail}
+                    </p>
+                  )}
+                </div>
+              </button>
+            </FadeIn>
+          ))}
+        </div>
+
+        {/* Where are you? self-identification */}
+        <FadeIn>
+          <div className="mt-16 text-center">
+            <p className="text-neutral-500 text-sm mb-4">
+              Where are you in your journey?
+            </p>
+            <div className="flex flex-wrap justify-center gap-3">
+              {steps.map(({ num, title }) => (
+                <button
+                  key={num}
+                  onClick={() => setActiveStep(num)}
+                  className={`px-5 py-2.5 rounded-full text-sm transition-colors min-h-[44px] ${
+                    activeStep === num
+                      ? "bg-primary-500 text-white"
+                      : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
+                  }`}
+                >
+                  {title}
+                </button>
+              ))}
+            </div>
+          </div>
+        </FadeIn>
+      </div>
+    </section>
   );
 }
