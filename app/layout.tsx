@@ -138,10 +138,10 @@ export default function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
         />
-        {/* GA4 — Replace G-XXXXXXXXXX with your Measurement ID */}
+        {/* GA4 — Replace G-FNL35J6RRG with your Measurement ID */}
         <script
           async
-          src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"
+          src="https://www.googletagmanager.com/gtag/js?id=G-FNL35J6RRG"
         />
         <script
           dangerouslySetInnerHTML={{
@@ -149,7 +149,7 @@ export default function RootLayout({
               window.dataLayer = window.dataLayer || [];
               function gtag(){dataLayer.push(arguments);}
               gtag('js', new Date());
-              gtag('config', 'G-XXXXXXXXXX');
+              gtag('config', 'G-FNL35J6RRG');
             `,
           }}
         />
